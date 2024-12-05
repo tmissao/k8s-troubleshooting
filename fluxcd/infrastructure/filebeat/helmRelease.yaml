@@ -24,20 +24,44 @@ spec:
     fullnameOverride: filebeat
     spec:
       type: filebeat
+      version: 8.7.0
       config:
-        filebeat.inputs:
-        - type: container
-          paths:
-          - /var/log/containers/*.log
+        filebeat.autodiscover.providers:
+        - node: ${NODE_NAME}
+          type: kubernetes
+          hints.default_config.enabled: "false"
+          templates:
+            - condition:
+                not:
+                  or: 
+                    - equals:
+                        kubernetes.namespace: kube-system
+                    - equals:
+                        kubernetes.namespace: elastic-system
+                    - equals:
+                        kubernetes.namespace: flux-system
+              config:
+                - paths:
+                    ["/var/log/containers/*${data.kubernetes.container.id}.log"]
+                  type: container
+                  json.keys_under_root: true
+                  json.add_error_key: false
+                  json.message_key: message
         processors:
-          - add_kubernetes_metadata:
-              host: ${NODE_NAME}
-              matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/"
+          - copy_fields:
+              fields:
+              - from: "kubernetes.replicaset.name"
+                to: "kubernetes.deployment.name"
+              when.has_fields: ['kubernetes.replicaset.name']
+          - replace:
+              fields:
+              - field: "kubernetes.deployment.name"
+                pattern: "(-[a-z0-9]+)$"
+                replacement: ""
+              when.has_fields: ['kubernetes.deployment.name']
           - add_fields:
               fields:
-                k8s_cluster: vanillawbc-oci-dev
+                k8s_cluster: vanillawbc-oci-devX
           # - rename:
           #     fields:
           #       - from: "kubernetes.container.name"
@@ -52,8 +76,8 @@ spec:
           #         to: "node.hostname"
           #       - from: "kubernetes.pod.name"
           #         to: "pod.name"
-              ignore_missing: true
-              fail_on_error: false
+          #     ignore_missing: true
+          #     fail_on_error: false
         output.logstash:
           hosts: ["logstash-ls-beats:5050"]
       daemonSet:
