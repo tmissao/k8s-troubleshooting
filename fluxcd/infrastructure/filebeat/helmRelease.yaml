@@ -1,0 +1,97 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: eck-filebeat
+  namespace: flux-system
+spec:
+  interval: 1m
+  targetNamespace: elastic-system
+  chart:
+    spec:
+      chart: eck-beats
+      version: '0.13.x'
+      sourceRef:
+        kind: HelmRepository
+        name: elastic
+        namespace: flux-system
+  install:
+    createNamespace: true
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    fullnameOverride: filebeat
+    spec:
+      type: filebeat
+      config:
+        filebeat.inputs:
+        - type: container
+          paths:
+          - /var/log/containers/*.log
+        processors:
+          - add_fields:
+              fields:
+                k8s_cluster: vanillawbc-oci-dev
+          - rename:
+              fields:
+                - from: "kubernetes.container.name"
+                  to: "app.name"
+                - from: "kubernetes.namespace"
+                  to: "app.namespace"
+                - from: "container.image.name"
+                  to: "app.image.name"
+                - from: "kubernetes.labels.version"
+                  to: "app.image.version"
+                - from: "kubernetes.node.hostname"
+                  to: "node.hostname"
+                - from: "kubernetes.pod.name"
+                  to: "pod.name"
+              ignore_missing: true
+              fail_on_error: false
+          - drop_fields:
+              fields:
+                [
+                  "ecs.version",
+                  "agent",
+                  "container",
+                  "kubernetes",
+                  "output",
+                  "agent.type",
+                  "agent.id",
+                  "agent.hostname",
+                  "input.type",
+                  "agent.ephemeral_id",
+                ]
+        output.logstash:
+          hosts: ["logstash-ls-beats:5050"]
+      daemonSet:
+        podTemplate:
+          spec:
+            automountServiceAccountToken: true
+            terminationGracePeriodSeconds: 30
+            dnsPolicy: ClusterFirstWithHostNet
+            hostNetwork: true # Allows to provide richer host metadata
+            containers:
+            - name: filebeat
+              securityContext:
+                runAsUser: 0
+                # If using Red Hat OpenShift uncomment this:
+                #privileged: true
+              volumeMounts:
+              - name: varlogcontainers
+                mountPath: /var/log/containers
+              - name: varlogpods
+                mountPath: /var/log/pods
+              - name: varlibdockercontainers
+                mountPath: /var/lib/docker/containers
+            volumes:
+            - name: varlogcontainers
+              hostPath:
+                path: /var/log/containers
+            - name: varlogpods
+              hostPath:
+                path: /var/log/pods
+            - name: varlibdockercontainers
+              hostPath:
+                path: /var/lib/docker/containers

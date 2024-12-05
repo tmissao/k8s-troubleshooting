@@ -1,0 +1,121 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: eck-operator
+  namespace: flux-system
+spec:
+  interval: 1m
+  targetNamespace: elastic-system
+  chart:
+    spec:
+      chart: eck-operator
+      version: '2.15.0'
+      sourceRef:
+        kind: HelmRepository
+        name: elastic
+        namespace: flux-system
+  install:
+    createNamespace: true
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: eck-stack
+  namespace: flux-system
+spec:
+  interval: 1m
+  targetNamespace: elastic-system
+  chart:
+    spec:
+      chart: eck-stack
+      version: '0.13.x'
+      sourceRef:
+        kind: HelmRepository
+        name: elastic
+        namespace: flux-system
+  install:
+    createNamespace: true
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    eck-elasticsearch:
+      enabled: true
+      fullnameOverride: elasticsearch
+      http:
+        tls:
+          selfSignedCertificate:
+            disabled: true
+      transport:
+        tls:
+          selfSignedCertificate:
+            disabled: true
+      nodeSets:
+        - name: default
+          count: 2
+          podTemplate:
+            spec:
+              containers:
+              - name: elasticsearch
+                readinessProbe:
+                  exec:
+                    command:
+                    - bash
+                    - -c
+                    - /mnt/elastic-internal/scripts/readiness-probe-script.sh
+                  failureThreshold: 3
+                  initialDelaySeconds: 10
+                  periodSeconds: 12
+                  successThreshold: 1
+                  timeoutSeconds: 12
+                env:
+                - name: READINESS_PROBE_TIMEOUT
+                  value: "10"
+          config:
+            node.store.allow_mmap: false
+            xpack.security.enabled: false
+    eck-kibana:
+      enabled: true
+      fullnameOverride: kibana
+      elasticsearchRef:
+        name: elasticsearch
+      http:
+        tls:
+          selfSignedCertificate:
+            disabled: true
+    eck-logstash:
+      enabled: true
+      fullnameOverride: logstash
+      elasticsearchRefs:
+        - name: elasticsearch
+          clusterName: demo
+      config:
+        pipeline.workers: 4
+        log.level: warn
+      services:
+      - name: beats
+        service:
+          spec:
+            type: ClusterIP
+            ports:
+              - port: 5050
+                name: filebeat
+                protocol: TCP
+                targetPort: 5050
+      pipelines:
+        - pipeline.id: main
+          config.string: |
+            input {
+              beats {
+                port => 5050
+              }
+            }
+            filter {
+
+            }
+            output {
+              stdout {
+                codec => rubydebug
+              }
+            }
