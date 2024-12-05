@@ -25,5 +25,4 @@ data:
             '}';
         
         access_log /var/log/nginx/access.log json_combined;
-        ...
     }
