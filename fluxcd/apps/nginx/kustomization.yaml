@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: nginx
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  path: ./kustomize/nginx/base
+  prune: true
+  targetNamespace: apps
+  sourceRef:
+    kind: GitRepository
+    name: nginx
+    namespace: flux-system

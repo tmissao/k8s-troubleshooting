@@ -30,6 +30,11 @@ spec:
           paths:
           - /var/log/containers/*.log
         processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+              - logs_path:
+                  logs_path: "/var/log/containers/"
           - add_fields:
               fields:
                 k8s_cluster: vanillawbc-oci-dev
@@ -49,25 +54,12 @@ spec:
                   to: "pod.name"
               ignore_missing: true
               fail_on_error: false
-          - drop_fields:
-              fields:
-                [
-                  "ecs.version",
-                  "agent",
-                  "container",
-                  "kubernetes",
-                  "output",
-                  "agent.type",
-                  "agent.id",
-                  "agent.hostname",
-                  "input.type",
-                  "agent.ephemeral_id",
-                ]
         output.logstash:
           hosts: ["logstash-ls-beats:5050"]
       daemonSet:
         podTemplate:
           spec:
+            serviceAccountName: filebeat
             automountServiceAccountToken: true
             terminationGracePeriodSeconds: 30
             dnsPolicy: ClusterFirstWithHostNet
@@ -85,6 +77,11 @@ spec:
                 mountPath: /var/log/pods
               - name: varlibdockercontainers
                 mountPath: /var/lib/docker/containers
+              env:
+              - name: NODE_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
             volumes:
             - name: varlogcontainers
               hostPath:
@@ -95,3 +92,31 @@ spec:
             - name: varlibdockercontainers
               hostPath:
                 path: /var/lib/docker/containers
+    clusterRole:
+      name: filebeat
+      rules:
+      - apiGroups: [""]
+        resources: ["nodes", "namespaces", "events", "pods"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["extensions"]
+        resources: ["replicasets"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["statefulsets", "deployments", "daemonsets", "replicasets"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["nodes/stats"]
+        verbs: ["get"]
+      - nonResourceURLs: ["/metrics"]
+        verbs: ["get"]
+    serviceAccount:
+      name: filebeat
+    clusterRoleBinding:
+      name: filebeat
+      subjects:
+      - kind: ServiceAccount
+        name: filebeat
+      roleRef:
+        kind: ClusterRole
+        name: filebeat
+        apiGroup: rbac.authorization.k8s.io

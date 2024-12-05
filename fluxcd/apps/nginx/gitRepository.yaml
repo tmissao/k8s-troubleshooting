@@ -1,0 +1,14 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: nginx
+  namespace: fluxcd
+spec:
+  interval: 1m0s
+  url: https://github.com:tmissao/k8s-troubleshooting
+  ref:
+    branch: master
+  ignore: |
+    kind/
+    fluxcd/
