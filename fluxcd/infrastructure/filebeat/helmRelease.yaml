@@ -38,20 +38,20 @@ spec:
           - add_fields:
               fields:
                 k8s_cluster: vanillawbc-oci-dev
-          - rename:
-              fields:
-                - from: "kubernetes.container.name"
-                  to: "app.name"
-                - from: "kubernetes.namespace"
-                  to: "app.namespace"
-                - from: "container.image.name"
-                  to: "app.image.name"
-                - from: "kubernetes.labels.version"
-                  to: "app.image.version"
-                - from: "kubernetes.node.hostname"
-                  to: "node.hostname"
-                - from: "kubernetes.pod.name"
-                  to: "pod.name"
+          # - rename:
+          #     fields:
+          #       - from: "kubernetes.container.name"
+          #         to: "app.name"
+          #       - from: "kubernetes.namespace"
+          #         to: "app.namespace"
+          #       - from: "container.image.name"
+          #         to: "app.image.name"
+          #       - from: "kubernetes.labels.version"
+          #         to: "app.image.version"
+          #       - from: "kubernetes.node.hostname"
+          #         to: "node.hostname"
+          #       - from: "kubernetes.pod.name"
+          #         to: "pod.name"
               ignore_missing: true
               fail_on_error: false
         output.logstash:
