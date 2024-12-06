@@ -86,7 +86,7 @@ spec:
                   "log"
                 ]
         output.logstash:
-          hosts: ["logstash-ls-beats:5050"]
+          hosts: ["oeuf1cc-common-non-dsb-logs01.development.cloud:5050"]
       daemonSet:
         podTemplate:
           spec:

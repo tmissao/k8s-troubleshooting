@@ -27,7 +27,7 @@ data:
           '"httpversion": "$server_protocol",'
           '"user_agent":"$http_user_agent",'
           '"remoteip":"$http_x_forwarded_for",'
-          '"upstream_resp_time": "$upstream_response_time"',
+          '"upstream_resp_time": "$upstream_response_time",'
           '"cdn": "$http_x_custom_lb_cdn"'
         '}';
     
