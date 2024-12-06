@@ -29,7 +29,8 @@ spec:
           target: ''
           fields:
             k8s_cluster: vanillawbc-oci-dev
-            env: dev  
+            env: dev
+            type: kubernetes  
       - rename:
           fields:
             - from: "kubernetes.container.name"
@@ -49,7 +50,7 @@ spec:
       - drop_fields:
           fields:
             [
-              "ecs.version",
+              "ecs",
               "agent",
               "container",
               "kubernetes",
@@ -59,6 +60,7 @@ spec:
               "agent.hostname",
               "input.type",
               "agent.ephemeral_id",
+              "log"
             ]
     output.logstash:
       hosts: ["logstash-ls-beats:5050"]

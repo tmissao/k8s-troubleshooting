@@ -53,7 +53,7 @@ spec:
             disabled: true
       nodeSets:
         - name: default
-          count: 2
+          count: 1
           podTemplate:
             spec:
               containers:
@@ -111,11 +111,59 @@ spec:
                 port => 5050
               }
             }
-            filter {
 
+            filter {
+              if [type] == "kubernetes" and [k8s_cluster] {
+                date {
+                  match => [ "timestamp", "ISO8601" ]
+                }
+                mutate {
+                  rename => { "type" => "orig_type" }
+                  add_field => { "type" => "k8s_%{k8s_cluster}_%{[app][name]}" }
+                }
+                if "beats_input_codec_plain_applied" in [tags] {
+                    mutate {
+                        remove_field => ["tags"]
+                    }
+                }
+                if [httpversion] {
+                  mutate {
+                    gsub => ["httpversion", "HTTP/", ""]
+                  }
+                }
+                if [basepath] {
+                  mutate {
+                    gsub => ["basepath", "^$", "/"]
+                  }
+                } else {
+                  mutate {
+                    add_field => { "basepath" => "/" }
+                  }
+                }
+                if [request] {
+                  grok {
+                    match => [ "request", '^/(?<locale>[a-z]{2})(?:\/|\?|$)']
+                    tag_on_failure => '_grokparsefailure-locale'
+                  }
+                }
+                if [user_agent] {
+                  useragent {
+                    source => "user_agent"
+                    target => "useragent"
+                  }
+                }
+              }
             }
+
             output {
-              stdout {
-                codec => rubydebug
+              if [env] {
+                elasticsearch {
+                  hosts => ["${DEMO_ES_HOSTS}"]
+                  index => "%{[type]}-%{+YYYY.MM.dd}"
+                }
+              } else {
+                stdout {
+                  codec => rubydebug
+                }
               }
             }
