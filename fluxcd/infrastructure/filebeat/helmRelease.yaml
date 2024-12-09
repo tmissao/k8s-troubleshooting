@@ -2,6 +2,25 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: eck-operator
+  namespace: flux-system
+spec:
+  interval: 1m
+  targetNamespace: elastic-system
+  chart:
+    spec:
+      chart: eck-operator
+      version: '2.15.0'
+      sourceRef:
+        kind: HelmRepository
+        name: elastic
+        namespace: flux-system
+  install:
+    createNamespace: true
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: eck-filebeat
   namespace: flux-system
 spec:
@@ -51,7 +70,7 @@ spec:
           - add_fields:
               target: ''
               fields:
-                k8s_cluster: vanillawbc-oci-dev
+                k8s_cluster: demo-dev
                 env: dev
                 type: kubernetes  
           - rename:
@@ -86,7 +105,7 @@ spec:
                   "log"
                 ]
         output.logstash:
-          hosts: ["oeuf1cc-common-non-dsb-logs01.development.cloud:5050"]
+          hosts: ["logstash-ls-beats:5050"]
       daemonSet:
         podTemplate:
           spec:
