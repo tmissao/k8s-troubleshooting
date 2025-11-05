@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    worker_processes 1;
+    
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        log_format json_combined escape=json
+        '{'
+          '"timestamp": "$time_iso8601",'
+          '"clientip": "$remote_addr",'
+          '"ident": "$remote_user",'
+          '"hostheader": "$host",'
+          '"request": "$request_uri",'
+          '"verb": "$request_method",'
+          '"basepath": "$uri",'
+          '"querystring": "$query_string",'
+          '"referrer": "$http_referer",'
+          '"req_time": $request_time,'
+          '"response": $status,'
+          '"httpversion": "$server_protocol",'
+          '"user_agent":"$http_user_agent",'
+          '"remoteip":"$http_x_forwarded_for",'
+          '"upstream_resp_time": "$upstream_response_time",'
+          '"cdn": "$http_x_custom_lb_cdn"'
+        '}';
+    
+        access_log /var/log/nginx/access.log json_combined;
+    
+        upstream backend {
+            server 127.0.0.1:8080;  # Backend server
+        }
+    
+        server {
+            listen 80;
+    
+            location / {
+                root /usr/share/nginx/html;
+                index index.html index.htm;
+            }
+    
+            location /upstream {
+              proxy_pass http://backend;
+            }
+        }
+    }
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Custom NGINX Page</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #0d1117;
+                color: #c9d1d9;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+            h1 {
+                color: #58a6ff;
+                font-size: 2.5rem;
+                margin-bottom: 0.5rem;
+            }
+            p {
+                color: #8b949e;
+                font-size: 1.2rem;
+            }
+            .footer {
+                position: absolute;
+                bottom: 10px;
+                font-size: 0.9rem;
+                color: #6e7681;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>🚀 Custom NGINX Deployment</h1>
+        <p>This page is being served from a ConfigMap inside your Kubernetes cluster.</p>
+        <div class="footer">Pod: <span id="pod-name">nginx</span></div>
+    </body>
+    </html>
