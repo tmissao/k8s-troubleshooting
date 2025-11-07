@@ -71,3 +71,16 @@ config:
         Suppress_Type_Name On
         Replace_Dots On
         Write_Operation create
+    [OUTPUT]
+        Name syslog
+        Match kube.*
+        Host 172.27.24.66
+        Port 599
+        Mode udp
+        syslog_format        rfc5424
+        syslog_maxsize       2048
+        syslog_hostname_key  container_name
+        syslog_appname_key   namespace
+        syslog_procid_key    procid
+        syslog_msgid_key     msgid
+        syslog_message_key   log
